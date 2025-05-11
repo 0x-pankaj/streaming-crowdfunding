@@ -5,8 +5,8 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-streaming_crowdfunding = "BYTpfCh7SyGQWzGv24aE5G2r5vD1stRj3dRZ8LTe3SF4"
+[programs.devnet]
+streaming_crowdfunding = "Gntdfwnopf3u53vU7MLZhdGLY7o8B5eaokpuXkwbgoPg"
 
 [registry]
 url = "https://api.apr.dev"
