@@ -60,7 +60,7 @@ export function UserPledges() {
     return (
       <div className="text-center">
         <p className="mb-4 text-muted-foreground">
-          You haven't made any pledges yet
+          You havent made any pledges yet
         </p>
         <Link href="/campaigns">
           <Button>Explore Campaigns</Button>

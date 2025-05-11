@@ -49,6 +49,7 @@ export function CreateCampaignForm() {
         goal: Number.parseFloat(goal),
         duration: Number.parseInt(duration),
       });
+      console.log("campaignId: ", campaignId);
       toast("Campaing created");
 
       router.push(`/campaigns/${campaignId}`);

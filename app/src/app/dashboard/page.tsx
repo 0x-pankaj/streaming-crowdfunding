@@ -1,6 +1,6 @@
-import { UserCampaigns } from "@/components/user-campaigns";
+import { UserCampaigns } from "@/components/user-campaign";
 import { UserPledges } from "@/components/user-pledges";
-import { StreamingPayments } from "@/components/streaming-payments";
+import { StreamingPayments } from "@/components/streaming-payment";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { WalletMultiButton } from "@/components/wallet-multi-button";

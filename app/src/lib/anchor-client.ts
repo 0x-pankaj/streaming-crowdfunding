@@ -5,6 +5,21 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useEffect, useState } from "react";
 import { Buffer } from "buffer";
+import { Campaign } from "./types";
+
+interface CampaignAccount {
+  creator: PublicKey;
+  title: string;
+  description: string;
+  goal: BN;
+  raised: BN;
+  backers: BN;
+  createdAt: BN; // camelCase version of created_at from IDL
+  endsAt: BN; // camelCase version of ends_at from IDL
+  active: boolean;
+  canceled: boolean;
+  fundsWithdrawn: boolean; // camelCase version of funds_withdrawn from IDL
+}
 
 // This is a more complete IDL based on your crowdfunding.json
 const IDL: Idl = {
@@ -84,30 +99,30 @@ const IDL: Idl = {
   events: [
     {
       name: "CancelEvent",
-      fields: [{ name: "campaign", type: "publicKey" }],
+      fields: [{ name: "campaign", type: "publicKey", index: false }],
     },
     {
       name: "GoalReachedEvent",
       fields: [
-        { name: "campaign", type: "publicKey" },
-        { name: "goal", type: "u64" },
-        { name: "raised", type: "u64" },
+        { name: "campaign", type: "publicKey", index: false },
+        { name: "goal", type: "u64", index: false },
+        { name: "raised", type: "u64", index: false },
       ],
     },
     {
       name: "PledgeEvent",
       fields: [
-        { name: "campaign", type: "publicKey" },
-        { name: "backer", type: "publicKey" },
-        { name: "amount", type: "u64" },
+        { name: "campaign", type: "publicKey", index: false },
+        { name: "backer", type: "publicKey", index: false },
+        { name: "amount", type: "u64", index: false },
       ],
     },
     {
       name: "WithdrawEvent",
       fields: [
-        { name: "campaign", type: "publicKey" },
-        { name: "creator", type: "publicKey" },
-        { name: "amount", type: "u64" },
+        { name: "campaign", type: "publicKey", index: false },
+        { name: "creator", type: "publicKey", index: false },
+        { name: "amount", type: "u64", index: false },
       ],
     },
   ],
@@ -136,12 +151,12 @@ const IDL: Idl = {
   ],
 };
 
-// Replace with your actual program ID
 const PROGRAM_ID = new PublicKey(
-  "BYTpfCh7SyGQWzGv24aE5G2r5vD1stRj3dRZ8LTe3SF4"
+  "Gntdfwnopf3u53vU7MLZhdGLY7o8B5eaokpuXkwbgoPg"
 );
+console.log("PROGRAM_ID: ", PROGRAM_ID.toString());
 
-// Mock campaigns for development until blockchain integration is complete
+// Mock campaigns for development fallback
 const mockCampaigns = [
   {
     id: "campaign1",
@@ -205,6 +220,10 @@ export function useAnchorProgram() {
 
       const program = new Program(IDL, PROGRAM_ID, provider);
       setProgram(program);
+      console.log(
+        "Program initialized successfully with ID:",
+        PROGRAM_ID.toString()
+      );
     } catch (error) {
       console.error("Error initializing Anchor program:", error);
     }
@@ -230,13 +249,23 @@ export async function createCampaign(
       program.provider.publicKey.toBuffer(),
       Buffer.from(title),
     ],
-    PROGRAM_ID
+    PROGRAM_ID // Use the same PROGRAM_ID constant here
   );
 
   const goalLamports = new BN(goal * LAMPORTS_PER_SOL);
   const durationSeconds = new BN(durationDays * 24 * 60 * 60);
 
   try {
+    console.log("Creating campaign with:", {
+      title,
+      description,
+      goal: goalLamports.toString(),
+      duration: durationSeconds.toString(),
+      campaignPda: campaignPda.toString(),
+      creator: program.provider.publicKey.toString(),
+      programId: program.programId.toString(),
+    });
+
     const tx = await program.methods
       .createCampaign(title, description, goalLamports, durationSeconds)
       .accounts({
@@ -360,7 +389,10 @@ export async function withdrawFunds(program: Program, campaignAddress: string) {
   }
 }
 
-export async function fetchCampaign(program: Program, campaignAddress: string) {
+export async function fetchCampaign(
+  program: Program,
+  campaignAddress: string
+): Promise<Campaign> {
   if (!program) {
     throw new Error("Program not initialized");
   }
@@ -368,10 +400,10 @@ export async function fetchCampaign(program: Program, campaignAddress: string) {
   try {
     const campaignPubkey = new PublicKey(campaignAddress);
 
-    // For development, return mock data
-    // In production, uncomment the following code:
-    /*
-    const account = await program.account.campaign.fetch(campaignPubkey)
+    // Use real blockchain data
+    const account = (await program.account.campaign.fetch(
+      campaignPubkey
+    )) as unknown as CampaignAccount;
     return {
       id: campaignAddress,
       title: account.title,
@@ -385,50 +417,46 @@ export async function fetchCampaign(program: Program, campaignAddress: string) {
       active: account.active,
       canceled: account.canceled,
       fundsWithdrawn: account.fundsWithdrawn,
-    }
-    */
+    };
+  } catch (error) {
+    console.error("Error fetching campaign:", error);
 
-    // Return mock data for now
+    // Fallback to mock data if there's an error
     const mockCampaign = mockCampaigns.find((c) => c.id === campaignAddress);
     if (!mockCampaign) {
       throw new Error("Campaign not found");
     }
     return mockCampaign;
-  } catch (error) {
-    console.error("Error fetching campaign:", error);
-    throw error;
   }
 }
 
-export async function fetchAllCampaigns(program: Program) {
+export async function fetchAllCampaigns(program: Program): Promise<Campaign[]> {
   if (!program) {
     console.log("Program not initialized, returning mock data");
     return mockCampaigns;
   }
 
   try {
-    // For development, return mock data
-    // In production, uncomment the following code:
-    /*
-    const accounts = await program.account.campaign.all()
-    return accounts.map((account) => ({
-      id: account.publicKey.toString(),
-      title: account.account.title,
-      description: account.account.description,
-      creator: account.account.creator.toString(),
-      goal: account.account.goal.toNumber() / LAMPORTS_PER_SOL,
-      raised: account.account.raised.toNumber() / LAMPORTS_PER_SOL,
-      backers: account.account.backers.toNumber(),
-      createdAt: account.account.createdAt.toNumber() * 1000, // Convert to milliseconds
-      endsAt: account.account.endsAt.toNumber() * 1000, // Convert to milliseconds
-      active: account.account.active,
-      canceled: account.account.canceled,
-      fundsWithdrawn: account.account.fundsWithdrawn,
-    }))
-    */
-
-    // Return mock data for now
-    return mockCampaigns;
+    // Use real blockchain data
+    const accounts = await program.account.campaign.all();
+    // Map each account to your Campaign interface
+    return accounts.map((account) => {
+      const data = account.account as unknown as CampaignAccount;
+      return {
+        id: account.publicKey.toString(),
+        title: data.title,
+        description: data.description,
+        creator: data.creator.toString(),
+        goal: data.goal.toNumber() / LAMPORTS_PER_SOL,
+        raised: data.raised.toNumber() / LAMPORTS_PER_SOL,
+        backers: data.backers.toNumber(),
+        createdAt: data.createdAt.toNumber() * 1000, // Convert to milliseconds
+        endsAt: data.endsAt.toNumber() * 1000, // Convert to milliseconds
+        active: data.active,
+        canceled: data.canceled,
+        fundsWithdrawn: data.fundsWithdrawn,
+      };
+    });
   } catch (error) {
     console.error("Error fetching all campaigns:", error);
     return mockCampaigns; // Return mock data on error
@@ -447,15 +475,9 @@ export async function fetchUserCampaigns(
   }
 
   try {
-    // For development, return filtered mock data
-    // In production, uncomment the following code:
-    /*
-    const allCampaigns = await fetchAllCampaigns(program)
-    return allCampaigns.filter((campaign) => campaign.creator === walletAddress)
-    */
-
-    // Return filtered mock data for now
-    return mockCampaigns.filter(
+    // Use real blockchain data
+    const allCampaigns = await fetchAllCampaigns(program);
+    return allCampaigns.filter(
       (campaign) => campaign.creator === walletAddress
     );
   } catch (error) {

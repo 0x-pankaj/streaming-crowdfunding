@@ -41,7 +41,9 @@ export function UserCampaigns() {
       }
     };
 
-    loadCampaigns();
+    if (program) {
+      loadCampaigns();
+    }
   }, [connected, publicKey, program]);
 
   const handleEndCampaign = async (campaignId: string) => {
@@ -58,9 +60,14 @@ export function UserCampaigns() {
         )
       );
       toast("Campaign ended");
+
+      // Reload the page after a short delay to show updated campaign data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("Failed to end campaign:", error);
-      toast("Failed to end campaing");
+      toast("FAiled to end campaign");
     } finally {
       setActionLoading(null);
     }
@@ -81,10 +88,15 @@ export function UserCampaigns() {
             : campaign
         )
       );
-      toast("Campaign cancelled ");
+      toast("campaign cancelled");
+
+      // Reload the page after a short delay to show updated campaign data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("Failed to cancel campaign:", error);
-      toast("Failed to cancel campaing");
+      toast("Failed to cancel campaign");
     } finally {
       setActionLoading(null);
     }
@@ -106,6 +118,11 @@ export function UserCampaigns() {
         )
       );
       toast("Funds withdrawn");
+
+      // Reload the page after a short delay to show updated campaign data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("Failed to withdraw funds:", error);
       toast("Failed to withdraw funds");

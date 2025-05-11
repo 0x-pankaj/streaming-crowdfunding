@@ -23,6 +23,7 @@
     "@solana/wallet-adapter-react-ui": "^0.9.34",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@solana/web3.js": "^1.87.6",
+    "@streamflow/stream": "^7.5.3",
     "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
