@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
   Card,
@@ -17,9 +17,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { WalletMultiButton } from "@/components/wallet-multi-button";
 import { toast } from "sonner";
-
 import { pledgeToCampaign, createStreamingPayment } from "@/lib/api";
 import { useAnchorProgram } from "@/lib/anchor-client";
+import { useStreamflowClient } from "@/lib/streamflow-client";
+import { fetchCampaignById } from "@/lib/api";
+import type { Campaign } from "@/lib/types";
 
 interface PledgeFormProps {
   id: string;
@@ -28,20 +30,37 @@ interface PledgeFormProps {
 export function PledgeForm({ id }: PledgeFormProps) {
   const { connected } = useWallet();
   const program = useAnchorProgram();
-  // const { toast } = useToast();
+  const streamflowClient = useStreamflowClient();
+
   const [amount, setAmount] = useState("");
   const [streamDuration, setStreamDuration] = useState("30");
   const [loading, setLoading] = useState(false);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+
+  useEffect(() => {
+    const loadCampaign = async () => {
+      if (program) {
+        try {
+          const campaignData = await fetchCampaignById(program, id);
+          setCampaign(campaignData);
+        } catch (error) {
+          console.error("Error loading campaign:", error);
+        }
+      }
+    };
+
+    loadCampaign();
+  }, [program, id]);
 
   const handlePledge = async () => {
     if (!amount || Number.parseFloat(amount) <= 0) {
-      toast("Invalid amount, Please enter a valid amount to pledge.");
+      toast("Invalid amount");
 
       return;
     }
 
     if (!program) {
-      toast("Program not initialized , Please try again in a moment.");
+      toast("Program not initialized");
 
       return;
     }
@@ -49,11 +68,14 @@ export function PledgeForm({ id }: PledgeFormProps) {
     setLoading(true);
     try {
       await pledgeToCampaign(program, id, Number.parseFloat(amount));
-      toast(
-        `Pledge successful!, You have successfully pledge ${amount} SOL to this campaign`
-      );
+      toast("Pledge successful");
 
       setAmount("");
+
+      // Reload the page after a short delay to show updated campaign data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("Pledge failed:", error);
       toast("Pledge failed");
@@ -64,7 +86,19 @@ export function PledgeForm({ id }: PledgeFormProps) {
 
   const handleStreamingPledge = async () => {
     if (!amount || Number.parseFloat(amount) <= 0) {
-      toast("Invalid amount, Please enter a valid amount to stream.");
+      toast("INvalid amount");
+
+      return;
+    }
+
+    if (!streamflowClient) {
+      toast("Streamflow client not initialized");
+
+      return;
+    }
+
+    if (!campaign) {
+      toast("Campaign not found");
 
       return;
     }
@@ -72,18 +106,20 @@ export function PledgeForm({ id }: PledgeFormProps) {
     setLoading(true);
     try {
       await createStreamingPayment(
+        streamflowClient,
         id,
+        campaign.creator, // Send to the campaign creator
         Number.parseFloat(amount),
         Number.parseInt(streamDuration)
       );
-      toast(
-        `Streaming payment created, successfully set up a payment of ${amount} SOL over ${streamDuration} days`
-      );
+      toast("STreaming payment created");
 
       setAmount("");
+
+      // No need to reload the page for streaming payments
     } catch (error) {
       console.error("Streaming payment failed:", error);
-      toast("Streaming payment failed");
+      toast("STreaming payment failed");
     } finally {
       setLoading(false);
     }
@@ -133,7 +169,7 @@ export function PledgeForm({ id }: PledgeFormProps) {
                 onClick={handlePledge}
                 disabled={loading}
               >
-                {loading ? "Processing..." : "Pledge Now"}
+                {loading ? "Processing on Solana..." : "Pledge Now"}
               </Button>
             </div>
           </TabsContent>
@@ -176,7 +212,7 @@ export function PledgeForm({ id }: PledgeFormProps) {
                 onClick={handleStreamingPledge}
                 disabled={loading}
               >
-                {loading ? "Processing..." : "Start Streaming"}
+                {loading ? "Creating Stream on Solana..." : "Start Streaming"}
               </Button>
             </div>
           </TabsContent>

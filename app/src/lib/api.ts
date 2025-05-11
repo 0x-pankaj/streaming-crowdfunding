@@ -16,6 +16,11 @@ import {
   fetchAllCampaigns as anchorFetchAllCampaigns,
   fetchUserCampaigns as anchorFetchUserCampaigns,
 } from "./anchor-client";
+import {
+  createStream as streamflowCreateStream,
+  cancelStream as streamflowCancelStream,
+  fetchUserStreams as streamflowFetchUserStreams,
+} from "@/lib/streamflow-client";
 
 // Mock data for parts that aren't implemented yet in the blockchain
 const mockCampaignStats: CampaignStats = {
@@ -68,21 +73,6 @@ const mockPledges: Pledge[] = [
     backer: "8Kw7UrFzqFU8j7ESoKAPb1EqJ2WJ3GhvPBTpwxwK7GLi",
     amount: 2.0,
     date: Date.now() - 3 * 24 * 60 * 60 * 1000,
-  },
-];
-
-const mockStreams: Stream[] = [
-  {
-    id: "stream1",
-    campaignId: "campaign1",
-    campaignTitle: "Decentralized Art Gallery",
-    sender: "8Kw7UrFzqFU8j7ESoKAPb1EqJ2WJ3GhvPBTpwxwK7GLi",
-    recipient: "5FHwkrdxkRZxNWKEcKy9rgPP3aTtMGWuABJhQhQjQnQA",
-    totalAmount: 5.0,
-    streamedAmount: 2.5,
-    startTime: Date.now() - 15 * 24 * 60 * 60 * 1000,
-    endTime: Date.now() + 15 * 24 * 60 * 60 * 1000,
-    status: "active",
   },
 ];
 
@@ -152,15 +142,43 @@ export async function fetchUserPledges(
 }
 
 export async function fetchUserStreams(
+  streamflowClient: any,
   walletAddress: string
 ): Promise<Stream[]> {
-  // In a real implementation, this would fetch from the blockchain
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const streams = mockStreams.filter((s) => s.sender === walletAddress);
-      resolve(streams);
-    }, 1000);
-  });
+  if (!streamflowClient) {
+    console.log("Streamflow client not initialized, returning mock data");
+    return [];
+  }
+
+  try {
+    const streams = await streamflowFetchUserStreams(
+      streamflowClient,
+      walletAddress
+    );
+
+    // Convert Streamflow streams to our app's Stream format
+    return streams.map((stream) => ({
+      id: stream.id,
+      campaignId: stream.name.includes("Campaign Support")
+        ? stream.name.split(" ").pop() || ""
+        : "",
+      campaignTitle: stream.name,
+      sender: stream.sender.toString(),
+      recipient: stream.recipient.toString(),
+      totalAmount: Number(stream.depositedAmount) / 1e9, // Convert from lamports to SOL
+      streamedAmount: Number(stream.withdrawnAmount) / 1e9, // Convert from lamports to SOL
+      startTime: stream.start * 1000, // Convert to milliseconds
+      endTime: stream.end ? stream.end * 1000 : 0, // Convert to milliseconds
+      status: stream.canceledAt
+        ? "canceled"
+        : stream.end && stream.end * 1000 < Date.now()
+        ? "completed"
+        : "active",
+    }));
+  } catch (error) {
+    console.error("Error fetching user streams:", error);
+    return [];
+  }
 }
 
 export async function createCampaign(
@@ -241,25 +259,37 @@ export async function withdrawFunds(
 }
 
 export async function createStreamingPayment(
+  streamflowClient: any,
   campaignId: string,
+  recipientAddress: string,
   amount: number,
   durationDays: number
-): Promise<void> {
-  // In a real implementation, this would use Streamflow SDK
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Mock streaming payment creation
-      resolve();
-    }, 1500);
-  });
+): Promise<string> {
+  if (!streamflowClient) throw new Error("Streamflow client not initialized");
+
+  try {
+    return await streamflowCreateStream(
+      streamflowClient,
+      recipientAddress,
+      amount,
+      durationDays
+    );
+  } catch (error) {
+    console.error("Error creating streaming payment:", error);
+    throw error;
+  }
 }
 
-export async function cancelStream(streamId: string): Promise<void> {
-  // In a real implementation, this would use Streamflow SDK
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Mock stream cancellation
-      resolve();
-    }, 1500);
-  });
+export async function cancelStreamPayment(
+  streamflowClient: any,
+  streamId: string
+): Promise<string> {
+  if (!streamflowClient) throw new Error("Streamflow client not initialized");
+
+  try {
+    return await streamflowCancelStream(streamflowClient, streamId);
+  } catch (error) {
+    console.error("Error cancelling stream:", error);
+    throw error;
+  }
 }

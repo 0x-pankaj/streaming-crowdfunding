@@ -1,11 +1,35 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { UserCampaigns } from "@/components/user-campaign";
 import { UserPledges } from "@/components/user-pledges";
 import { StreamingPayments } from "@/components/streaming-payment";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { WalletMultiButton } from "@/components/wallet-multi-button";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+  const { connected } = useWallet();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Redirect to home if not connected
+  useEffect(() => {
+    if (mounted && !connected) {
+      router.push("/");
+    }
+  }, [mounted, connected, router]);
+
+  if (!mounted || !connected) {
+    return null;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex items-center justify-between">

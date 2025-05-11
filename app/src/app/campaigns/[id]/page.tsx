@@ -6,13 +6,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CampaignStats } from "@/components/campaign-stats";
 import { CampaignUpdates } from "@/components/campaign-updates";
 
-export default function CampaignPage({ params }: { params: { id: string } }) {
+export default async function CampaignPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const { id } = await params;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <BackButton href="/campaigns" className="mb-6" />
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-2">
-          <CampaignDetails id={params.id} />
+          <CampaignDetails id={id} />
           <Tabs defaultValue="stats" className="mt-8">
             <TabsList>
               <TabsTrigger value="stats">Stats</TabsTrigger>
@@ -21,21 +27,21 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
             <TabsContent value="stats">
               <Card>
                 <CardContent className="pt-6">
-                  <CampaignStats id={params.id} />
+                  <CampaignStats id={id} />
                 </CardContent>
               </Card>
             </TabsContent>
             <TabsContent value="updates">
               <Card>
                 <CardContent className="pt-6">
-                  <CampaignUpdates id={params.id} />
+                  <CampaignUpdates id={id} />
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
         </div>
         <div>
-          <PledgeForm id={params.id} />
+          <PledgeForm id={id} />
         </div>
       </div>
     </div>
